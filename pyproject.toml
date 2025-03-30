@@ -1,0 +1,48 @@
+[project]
+name = "rs_example_lib"
+version = "0.1.0"
+
+dependencies = ['numpy >= 2.0']
+
+[project.optional-dependencies]
+build = ['build']
+dev = ['cython >= 3.0.5', 'meson-python >= 0.17.0', 'ninja >= 1.11']
+
+
+[build-system]
+requires = [
+    "setuptools",
+    "cython >= 3.0.5",
+    "numpy >= 2.0",    # need to call numpy.get_include() during build
+]
+build-backend = "setuptools.build_meta"
+
+[tool.meson-python.args]
+setup = ['--vsenv']
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+exclude = [
+    "examples/*", # Patterns are glob expressions
+]
+lint.select = ["ALL"]
+lint.ignore = [
+    "FBT",     # Boolean traps
+    "PLR2004", # constant value
+    "T201",    # Allow print
+    "TD002",   # No author on TODO
+    "TD003",   # No ticket on TODO
+    "FIX",     # All fixme types (aka, you can have TODOs and FIXMEs in your code.
+    # https://docs.astral.sh/ruff/formatter/#conflicting-lint-rules
+    "COM812", # missing-trailing-comma
+    "ISC001", # single-line-implicit-string-concatenation
+]
+
+lint.unfixable = [
+    "B007",    # Don't modify unused loop control variable
+    "F401",    # Don't delete unused imports
+    "F841",    # Don't delete unused variables
+    "ERA001",  # Don't delete commented out code
+    "PERF102", # Don't auto-convert .items() to .values()
+]
