@@ -6,6 +6,7 @@ from distutils._modified import newer_group  # type: ignore  # noqa: PGH003
 from distutils.errors import DistutilsSetupError
 
 import numpy as np
+from Cython.Build import cythonize
 from setuptools import Extension, setup
 from setuptools.command import build_ext
 
@@ -15,64 +16,16 @@ class BuildExtMod(build_ext.build_ext):
 
     def __init__(self, *args: tuple, **kwargs: dict) -> None:
         """Initialize the class."""
-        self._skipped_extensions = set()
+        self._skipped_extensions = set()  # added this line
         super().__init__(*args, **kwargs)
 
-    def build_extension(self, ext: Extension) -> None:  # noqa: C901
+    def build_extension(self, ext: Extension) -> None:
         """Build an extension module."""
         if not self.editable_mode or self.force:
             super().build_extension(ext)
             return
 
-        ### Cython distutils build_ext
-        from Cython.Build.Dependencies import cythonize
-
-        # Set up the include_path for the Cython compiler:
-        #    1.    Start with the command line option.
-        #    2.    Add in any (unique) paths from the extension
-        #        cython_include_dirs (if Cython.Distutils.extension is used).
-        #    3.    Add in any (unique) paths from the extension include_dirs
-        includes = list(self.cython_include_dirs)
-        for include_dir in getattr(ext, "cython_include_dirs", []):
-            if include_dir not in includes:
-                includes.append(include_dir)
-
-        # In case extension.include_dirs is a generator, evaluate it and keep
-        # result
-        ext.include_dirs = list(ext.include_dirs)
-        for include_dir in ext.include_dirs + list(self.include_dirs):
-            if include_dir not in includes:
-                includes.append(include_dir)
-
-        # Set up Cython compiler directives:
-        #    1. Start with the command line option.
-        #    2. Add in any (unique) entries from the extension
-        #         cython_directives (if Cython.Distutils.extension is used).
-        directives = dict(self.cython_directives)
-        if hasattr(ext, "cython_directives"):
-            directives.update(ext.cython_directives)
-
-        if self.get_extension_attr(ext, "cython_cplus"):
-            ext.language = "c++"
-
-        options = {
-            "use_listing_file": self.get_extension_attr(ext, "cython_create_listing"),
-            "emit_linenums": self.get_extension_attr(ext, "cython_line_directives"),
-            "include_path": includes,
-            "compiler_directives": directives,
-            "build_dir": self.build_temp if self.get_extension_attr(ext, "cython_c_in_temp") else None,
-            "generate_pxi": self.get_extension_attr(ext, "cython_gen_pxi"),
-            "gdb_debug": self.get_extension_attr(ext, "cython_gdb"),
-            "c_line_in_traceback": not getattr(ext, "no_c_in_traceback", 0),
-            "compile_time_env": self.get_extension_attr(ext, "cython_compile_time_env", default=None),
-        }
-
-        new_ext = cythonize(ext, force=self.force, quiet=self.verbose == 0, **options)[0]
-        ext.sources = new_ext.sources
-        ext.depends = new_ext.depends  # added this line
-        ####
-
-        ### distutils build_ext
+        ### setuptools._distutils.command.build_ext.build_ext
         sources = ext.sources
         if sources is None or not isinstance(sources, (list, tuple)):
             msg = (
@@ -88,7 +41,7 @@ class BuildExtMod(build_ext.build_ext):
         depends = sources + ext.depends
         if not (self.force or newer_group(depends, self.get_ext_filename(ext.name), "newer")):  # updated this line
             log.info("skipping '%s' extension (up-to-date)", ext.name)
-            self._skipped_extensions.add(ext)
+            self._skipped_extensions.add(ext)  # added this line
             return
         log.info("building '%s' extension", ext.name)
 
@@ -162,7 +115,7 @@ class BuildExtMod(build_ext.build_ext):
 
         build_py = self.get_finalized_command("build_py")
         for ext in self.extensions:
-            if ext in self._skipped_extensions:
+            if ext in self._skipped_extensions:  # added this line
                 continue
             inplace_file, regular_file = self._get_inplace_equivalent(build_py, ext)
 
@@ -180,28 +133,30 @@ class BuildExtMod(build_ext.build_ext):
 
 
 setup(
-    ext_modules=[
-        Extension(
-            name="rs_example_lib.frf",
-            sources=["rs_example_lib/frf.pyx"],
-            include_dirs=[np.get_include()],
-            define_macros=[("NPY_NO_DEPRECATED_API", "NPY_1_7_API_VERSION")],
-            language="c++",
-        ),
-        Extension(
-            name="rs_example_lib.rss",
-            sources=["rs_example_lib/rss.pyx"],
-            include_dirs=[np.get_include()],
-            define_macros=[("NPY_NO_DEPRECATED_API", "NPY_1_7_API_VERSION")],
-            language="c++",
-        ),
-        Extension(
-            name="rs_example_lib.trapz",
-            sources=["rs_example_lib/trapz.pyx"],
-            include_dirs=[np.get_include(), "rs_example_lib/"],
-            define_macros=[("NPY_NO_DEPRECATED_API", "NPY_1_7_API_VERSION")],
-            language="c++",
-        ),
-    ],
+    ext_modules=cythonize(
+        [
+            Extension(
+                name="rs_example_lib.frf",
+                sources=["rs_example_lib/frf.pyx"],
+                include_dirs=[np.get_include()],
+                define_macros=[("NPY_NO_DEPRECATED_API", "NPY_1_7_API_VERSION")],
+                language="c++",
+            ),
+            Extension(
+                name="rs_example_lib.rss",
+                sources=["rs_example_lib/rss.pyx"],
+                include_dirs=[np.get_include()],
+                define_macros=[("NPY_NO_DEPRECATED_API", "NPY_1_7_API_VERSION")],
+                language="c++",
+            ),
+            Extension(
+                name="rs_example_lib.trapz",
+                sources=["rs_example_lib/trapz.pyx"],
+                include_dirs=[np.get_include(), "rs_example_lib/"],
+                define_macros=[("NPY_NO_DEPRECATED_API", "NPY_1_7_API_VERSION")],
+                language="c++",
+            ),
+        ]
+    ),
     cmdclass={"build_ext": BuildExtMod},
 )

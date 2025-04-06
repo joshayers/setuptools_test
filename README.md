@@ -19,4 +19,4 @@
 
 4. Install editable project
 
-    `pip install --no-build-isolation --config-settings=editable-verbose=true --editable .`
+    `pip install --no-build-isolation --editable .`
