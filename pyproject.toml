@@ -2,11 +2,11 @@
 name = "rs_example_lib"
 version = "0.1.0"
 
-dependencies = ['numpy >= 2.0']
+dependencies = ["numpy >= 2.0"]
 
 [project.optional-dependencies]
-build = ['build']
-dev = ['cython >= 3.0.5', 'meson-python >= 0.17.0', 'ninja >= 1.11']
+build = ["build"]
+dev = ["cython >= 3.0.5", "setuptools"]
 
 
 [build-system]
@@ -16,6 +16,7 @@ requires = [
     "numpy >= 2.0",    # need to call numpy.get_include() during build
 ]
 build-backend = "setuptools.build_meta"
+
 
 [tool.meson-python.args]
 setup = ['--vsenv']
